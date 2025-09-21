@@ -1,0 +1,42 @@
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
+
+User = get_user_model()
+
+class Transaction(models.Model):
+    """
+    Represents a single transaction by a user.
+    amount: positive for expense (positive number) — you can use negative amounts for income if desired,
+            but we'll assume positive numbers as 'spend' by default.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transactions")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    category = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.user.username} · {self.category} · {self.amount}"
+
+
+class SavingGoal(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="saving_goals")
+    goal_name = models.CharField(max_length=200)
+    target_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    current_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    deadline = models.DateField()
+
+    class Meta:
+        ordering = ["deadline"]
+
+    def progress_percent(self):
+        if self.target_amount == 0:
+            return 0
+        return round((self.current_amount / self.target_amount) * 100, 2)
+
+    def __str__(self):
+        return f"{self.user.username} · {self.goal_name}"
